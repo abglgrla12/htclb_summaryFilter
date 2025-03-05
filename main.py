@@ -4,6 +4,11 @@ from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import JSONResponse
 from starlette.middleware.cors import CORSMiddleware
 
+import os
+import uvicorn
+
+
+
 app = FastAPI()
 
 # Enable CORS for all origins (Adjust for production)
@@ -38,4 +43,5 @@ async def filter_totals(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    port = int(os.getenv("PORT", 8000))  # Get PORT from Heroku, default to 8000
+    uvicorn.run(app, host="0.0.0.0", port=port)
