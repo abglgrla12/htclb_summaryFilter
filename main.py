@@ -6,10 +6,10 @@ from starlette.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
-# CORS Middleware
+# Enable CORS for all origins (Adjust for production)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Adjust for production
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -26,10 +26,10 @@ async def filter_totals(file: UploadFile = File(...)):
         mask = df[first_col].astype(str).str.contains("Total", case=False, na=False)
         
         # Split into two DataFrames
-        dt_summary = df[mask].reset_index(drop=True)
-        dt_filtered = df[~mask].reset_index(drop=True)
+        dt_summary = df[mask].reset_index(drop=True)   # Rows with 'Total'
+        dt_filtered = df[~mask].reset_index(drop=True) # Rows without 'Total'
         
-        # Convert DataFrames to dictionaries for JSON response
+        # Convert DataFrames to JSON response
         return JSONResponse(content={
             "dt_summary": dt_summary.to_dict(orient="records"),
             "dt_filtered": dt_filtered.to_dict(orient="records")
