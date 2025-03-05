@@ -18,13 +18,10 @@ app.add_middleware(
 @app.post("/filter_totals")
 async def filter_totals(file: UploadFile = File(...)):
     try:
-        # Read the uploaded Excel file, specifically the "Report" sheet
-        df = pd.read_excel(file.file, sheet_name="Report", header=0, dtype=str)
+        # Read the Excel file, using the "Report" sheet
+        df = pd.read_excel(file.file, sheet_name="Report", header=0)
         
-        # Replace all empty strings and NaN values with None (JSON friendly)
-        df = df.replace(["", "NaN", "nan", "None"], None)
-
-        # Identify rows where the first column contains 'Total'
+        # Identify rows where the first column contains "Total"
         first_col = df.columns[0]
         mask = df[first_col].astype(str).str.contains("Total", case=False, na=False)
         
@@ -32,13 +29,15 @@ async def filter_totals(file: UploadFile = File(...)):
         dt_summary = df[mask].reset_index(drop=True)
         dt_filtered = df[~mask].reset_index(drop=True)
 
-        # Convert DataFrames to dictionaries for JSON response
+        # Convert empty values to None for JSON compatibility
+        dt_summary = dt_summary.where(pd.notna(dt_summary), None)
+        dt_filtered = dt_filtered.where(pd.notna(dt_filtered), None)
+        
+        # Convert DataFrames to JSON response
         return JSONResponse(content={
             "dt_summary": dt_summary.to_dict(orient="records"),
             "dt_filtered": dt_filtered.to_dict(orient="records")
         })
-    except ValueError as ve:
-        raise HTTPException(status_code=400, detail=f"Sheet 'Report' not found: {ve}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
