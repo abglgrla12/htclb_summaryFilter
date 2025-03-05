@@ -2,4 +2,5 @@ fastapi
 uvicorn
 pandas
 openpyxl
-pip freeze
+pip freeze > requirements.txt
+
