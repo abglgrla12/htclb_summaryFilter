@@ -20,19 +20,26 @@ async def filter_totals(file: UploadFile = File(...)):
     try:
         # Read the Excel file, using the "Report" sheet
         df = pd.read_excel(file.file, sheet_name="Report", header=0)
-        
+
         # Identify rows where the first column contains "Total"
         first_col = df.columns[0]
         mask = df[first_col].astype(str).str.contains("Total", case=False, na=False)
-        
+
         # Split into two DataFrames
         dt_summary = df[mask].reset_index(drop=True)
         dt_filtered = df[~mask].reset_index(drop=True)
 
-        # Convert empty values to None for JSON compatibility
-        dt_summary = dt_summary.where(pd.notna(dt_summary), None)
-        dt_filtered = dt_filtered.where(pd.notna(dt_filtered), None)
-        
+        # Convert empty values and NaT (datetime null) to None for JSON compatibility
+        dt_summary = dt_summary.where(pd.notna(dt_summary), None).astype(object)
+        dt_filtered = dt_filtered.where(pd.notna(dt_filtered), None).astype(object)
+
+        # Convert datetime columns to string to avoid NaT serialization issue
+        for col in dt_summary.select_dtypes(include=["datetime"]).columns:
+            dt_summary[col] = dt_summary[col].astype(str).replace("NaT", None)
+
+        for col in dt_filtered.select_dtypes(include=["datetime"]).columns:
+            dt_filtered[col] = dt_filtered[col].astype(str).replace("NaT", None)
+
         # Convert DataFrames to JSON response
         return JSONResponse(content={
             "dt_summary": dt_summary.to_dict(orient="records"),
