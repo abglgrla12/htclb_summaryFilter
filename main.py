@@ -3,7 +3,7 @@ import uvicorn
 import time
 import os
 from fastapi import FastAPI, UploadFile, File, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 from starlette.middleware.cors import CORSMiddleware
 
 # FastAPI app initialization
@@ -52,18 +52,28 @@ async def filter_totals(file: UploadFile = File(...)):
         dt_filtered = df[~mask].reset_index(drop=True)
 
         # Save filtered data to a new Excel file
-        output_filename = f"{OUTPUT_DIR}/filtered_{int(time.time())}.xlsx"
-        dt_filtered.to_excel(output_filename, index=False)
+        timestamp = int(time.time())
+        output_filename = f"filtered_{timestamp}.xlsx"
+        output_filepath = os.path.join(OUTPUT_DIR, output_filename)
+        dt_filtered.to_excel(output_filepath, index=False)
 
         elapsed_time = time.time() - start_time  # Measure execution time
 
         return JSONResponse(content={
             "processing_time": f"{elapsed_time:.2f} seconds",
             "dt_summary": dt_summary.to_dict(orient="records"),
-            "dt_filtered_file": output_filename  # File path for Make.com download
+            "download_url": f"/download/{output_filename}"  # File download URL
         })
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
+
+@app.get("/download/{filename}")
+async def download_file(filename: str):
+    """Download the processed Excel file."""
+    file_path = os.path.join(OUTPUT_DIR, filename)
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="File not found")
+    return FileResponse(file_path, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", filename=filename)
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
