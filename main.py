@@ -29,9 +29,15 @@ async def filter_totals(file: UploadFile = File(...)):
         dt_summary = df[mask].reset_index(drop=True)
         dt_filtered = df[~mask].reset_index(drop=True)
         
-        # **Fix NaN issue by replacing NaN with None (JSON friendly)**
+        # **Fix NaN & NaT issues by replacing with None (JSON friendly)**
         dt_summary = dt_summary.where(pd.notna(dt_summary), None)
         dt_filtered = dt_filtered.where(pd.notna(dt_filtered), None)
+
+        # **Convert datetime columns to strings to avoid NaT issues**
+        for col in dt_summary.select_dtypes(include=["datetime"]).columns:
+            dt_summary[col] = dt_summary[col].astype(str).replace("NaT", None)
+        for col in dt_filtered.select_dtypes(include=["datetime"]).columns:
+            dt_filtered[col] = dt_filtered[col].astype(str).replace("NaT", None)
 
         # Convert DataFrames to dictionaries for JSON response
         return JSONResponse(content={
