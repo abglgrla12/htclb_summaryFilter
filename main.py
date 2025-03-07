@@ -2,6 +2,7 @@ import pandas as pd
 import uvicorn
 import time
 import os
+import io
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import JSONResponse, FileResponse
 from starlette.middleware.cors import CORSMiddleware
@@ -51,18 +52,18 @@ async def filter_totals(file: UploadFile = File(...)):
         dt_summary = df[mask].reset_index(drop=True)
         dt_filtered = df[~mask].reset_index(drop=True)
 
-        # Save filtered data to a new Excel file
-        timestamp = int(time.time())
-        output_filename = f"filtered_{timestamp}.xlsx"
-        output_filepath = os.path.join(OUTPUT_DIR, output_filename)
-        dt_filtered.to_excel(output_filepath, index=False)
+        # Save filtered data to a new Excel file with "Report" sheet name
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+            dt_filtered.to_excel(writer, sheet_name='Report', index=False)
+        output.seek(0)
 
         elapsed_time = time.time() - start_time  # Measure execution time
 
         return JSONResponse(content={
             "processing_time": f"{elapsed_time:.2f} seconds",
             "dt_summary": dt_summary.to_dict(orient="records"),
-            "download_url": f"/download/{output_filename}"  # File download URL
+            "download_url": "/download/filtered_report.xlsx"
         })
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
