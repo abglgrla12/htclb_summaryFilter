@@ -39,7 +39,7 @@ async def filter_totals(file: UploadFile = File(...)):
         start_time = time.time()
 
         # Read Excel file from "Report" sheet
-        df = pd.read_excel(file.file, sheet_name="Report", header=0, dtype=str)
+        df = pd.read_excel(file.file, sheet_name="Report", header=0, dtype=str, engine="openpyxl")
 
         # Convert empty values to None
         df = clean_dataframe(df)
